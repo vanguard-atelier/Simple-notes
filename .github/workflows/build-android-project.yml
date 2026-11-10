@@ -1,49 +1,17 @@
-name: "Build SimpleNotes Debug APK"
-
-on:
-  push:
-    branches: [ "**" ]
-  pull_request:
-    branches: [ "**" ]
-  workflow_dispatch:
+name: Build APK
+on: [push, workflow_dispatch]
 
 jobs:
-  build-debug-apk:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Repository"
-        uses: actions/checkout@v4
-
-      - name: "Set up JDK 21 (Temurin)"
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          java-version: "21"
-          distribution: "temurin"
-          cache: "gradle"
-
-      - name: "Set up Android SDK"
-        uses: android-actions/setup-android@v3
-
-      - name: "Prepare Debug Keystore"
-        run: |
-          if [ ! -f debug.keystore ] && [ -f debug.keystore.base64 ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
-          elif [ ! -f debug.keystore ]; then
-            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-      - name: "Grant Execute Permission for Gradlew"
-        run: chmod +x gradlew scripts/build-debug-apk.sh
-
-      - name: "Build Debug APK"
-        run: ./scripts/build-debug-apk.sh
-
-      - name: "Upload SimpleNotes Debug APK Artifact"
-        uses: actions/upload-artifact@v4
+          distribution: 'temurin'
+          java-version: '17'
+      - run: chmod +x gradlew && ./gradlew assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
         with:
-          name: "SimpleNotes-debug-apk"
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            dist/SimpleNotes-debug.apk
-          if-no-files-found: error
-          retention-days: 30
+          name: app-debug
+          path: app/build/outputs/apk/debug/*.apk
