@@ -19,10 +19,16 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Force Generate Debug Keystore
+      - name: Spawn Keystores Everywhere
         run: |
+          # 1. Project root (where Simple-notes is throwing hands)
+          keytool -genkey -v -keystore ./debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          # 2. app/ subfolder just in case it looks there next
+          mkdir -p app
+          cp ./debug.keystore ./app/debug.keystore
+          # 3. Default Android home path
           mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          cp ./debug.keystore ~/.android/debug.keystore
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
