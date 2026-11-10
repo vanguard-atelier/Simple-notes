@@ -1,0 +1,8 @@
+{
+  "name": "SimpleNotes",
+  "description": "Modern Material You 3 Fluent Markdown, Todo.txt, and Plaintext note-taking workspace with 16:10 tablet multi-pane support and instant local file saving.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

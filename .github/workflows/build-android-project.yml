@@ -1,71 +1,49 @@
-##############################################################################################################################
-# # Cleanup:
-#const sleep = ms => () => new Promise((resolve, reject) => window.setTimeout(resolve, ms));
-#Promise.resolve()
-#.then(() => {  document.getElementsByClassName("details-overlay details-reset position-relative d-inline-block ")[3].children[0].click();  })
-#.then(sleep(500))
-#.then(() => {  document.getElementsByClassName("dropdown-item btn-link menu-item-danger")[0].click();  })
-#.then(sleep(1000))
-#.then(() => {  document.getElementsByClassName("btn btn-block btn-danger")[0].click();});
-#
-# while [ 1 ] ; do sleep 4; xdotool key Up; sleep 0.1; xdotool key Return; done
-##############################################################################################################################
+name: "Build SimpleNotes Debug APK"
 
-name: "CI"
-
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    if: "!contains(github.event.head_commit.message, 'ci skip') && (!contains(github.event_name, 'pull_request') || (contains(github.event_name, 'pull_request') && github.event.pull_request.head.repo.full_name != github.repository))"
+  build-debug-apk:
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
 
-    - name: "Checkout: Code"
-      uses: actions/checkout@v4
+      - name: "Set up JDK 21 (Temurin)"
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "gradle"
 
-    - name: "Checkout: Code (PR)"
-      uses: actions/checkout@v4
-      if: "contains(github.event_name, 'pull_request')"
-      with:
-        ref: ${{github.event.pull_request.head.ref}}
-        repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: "Set up Android SDK"
+        uses: android-actions/setup-android@v3
 
-    - name: "Setup: Java"
-      uses: actions/setup-java@v4
-      with:
-        java-version: 21
-        distribution: "temurin"
+      - name: "Prepare Debug Keystore"
+        run: |
+          if [ ! -f debug.keystore ] && [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          elif [ ! -f debug.keystore ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
 
-    - name: "Setup: Install additional dependencies"
-      run: sudo apt-get install -y ispell
+      - name: "Grant Execute Permission for Gradlew"
+        run: chmod +x gradlew scripts/build-debug-apk.sh
 
-    - name: "Cache: Gradle"
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle
-          .gradle
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.*') }}
+      - name: "Build Debug APK"
+        run: ./scripts/build-debug-apk.sh
 
-    - name: "Build: Project with make"
-      run: make clean all
-
-    - name: "Build: List dist files"
-      if: always()
-      run: find dist -type f -maxdepth 2
-
-    - name: "Artifacts: All"
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: "all"
-        path: dist
-        retention-days: 5
-
-    - name: "Artifacts: Android APK"
-      uses: actions/upload-artifact@v4
-      with:
-        name: "android-apk"
-        path: |
-          dist/*.apk
+      - name: "Upload SimpleNotes Debug APK Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "SimpleNotes-debug-apk"
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            dist/SimpleNotes-debug.apk
+          if-no-files-found: error
+          retention-days: 30
